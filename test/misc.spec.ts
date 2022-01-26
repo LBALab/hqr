@@ -48,4 +48,20 @@ describe('Misc features', () => {
     ]);
     consoleLogMock.mockRestore();
   });
+
+  it('should test the dump() method with blank entries', async () => {
+    const consoleLogMock = jest.spyOn(console, 'log').mockImplementation(() => {
+      // do nothing
+    });
+    const file = await readHQRFile('BLANKS.HQR');
+    const hqr = HQR.fromArrayBuffer(file.buffer);
+    hqr.dump();
+    expect(consoleLogMock.mock.calls).toEqual([
+      ['0: type=0 size=128'],
+      ['1: blank'],
+      ['2: type=0 size=128'],
+      ['3: blank'],
+    ]);
+    consoleLogMock.mockRestore();
+  });
 });
