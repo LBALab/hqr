@@ -24,13 +24,17 @@ export default class HQR {
       const entry = this.entries[i];
       if (entry) {
         console.log(
-          `${i}: type=${entry.type} size=${entry.content.byteLength}`
+          `${i}: type=${entry.type} size=${
+            entry.content.byteLength
+          } compressed=${entry.metadata.compressedSize || '?'}`
         );
         let j = 0;
         let hidden = entry.next;
         while (hidden) {
           console.log(
-            `  ${i}.${j}(hidden): type=${hidden.type} size=${hidden.content.byteLength}`
+            `  ${i}.${j}(hidden): type=${hidden.type} size=${
+              hidden.content.byteLength
+            } compressed=${hidden.metadata.compressedSize || '?'}`
           );
           hidden = hidden.next;
           j++;

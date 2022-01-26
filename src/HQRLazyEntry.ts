@@ -1,6 +1,6 @@
 import { decodeEntry } from './compression';
 import { EntryInfo } from './HQRReader';
-import { CompressionType, HQREntryBase } from './types';
+import { CompressionType, HQREntryBase, HQREntryMetadata } from './types';
 
 /*
  ** A HQRLazyEntry is an entry that can be decoded on demand,
@@ -14,6 +14,7 @@ export default class HQRLazyEntry implements HQREntryBase {
   private readonly info: EntryInfo;
   private _content?: ArrayBuffer;
   next?: HQRLazyEntry;
+  readonly metadata: HQREntryMetadata = {};
 
   get content(): ArrayBuffer {
     if (!this._content) {
@@ -26,8 +27,13 @@ export default class HQRLazyEntry implements HQREntryBase {
     return this.info.type;
   }
 
-  constructor(buffer: ArrayBuffer, info: EntryInfo) {
+  constructor(
+    buffer: ArrayBuffer,
+    info: EntryInfo,
+    metadata: HQREntryMetadata
+  ) {
     this.buffer = buffer;
     this.info = info;
+    this.metadata = metadata;
   }
 }

@@ -80,10 +80,14 @@ export default class HQRReader {
 
   private readEntry(entryInfo: EntryInfo): HQREntryBase {
     if (this.options.lazyLoad) {
-      return new HQRLazyEntry(this.buffer, entryInfo);
+      return new HQRLazyEntry(this.buffer, entryInfo, {
+        compressedSize: entryInfo.compressedSize,
+      });
     }
 
     const content = decodeEntry(this.buffer, entryInfo);
-    return new HQREntry(content, entryInfo.type);
+    return new HQREntry(content, entryInfo.type, {
+      compressedSize: entryInfo.compressedSize,
+    });
   }
 }

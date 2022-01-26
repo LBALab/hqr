@@ -4,8 +4,13 @@ export enum CompressionType {
   LZMIT_TYPE_2 = 2,
 }
 
+export interface HQREntryMetadata extends Record<string, any> {
+  compressedSize?: number;
+}
+
 export interface HQREntryBase {
   type: CompressionType;
   content: ArrayBuffer;
   next?: HQREntryBase;
+  readonly metadata: HQREntryMetadata;
 }
