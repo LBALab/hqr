@@ -1,3 +1,4 @@
+import { compressLZSS_LBA } from './compression/LZSS_LBA';
 import { ENTRY_HEADER_SIZE } from './constants';
 import HQR from './HQR';
 import { CompressionType, HQREntryBase } from './types';
@@ -20,6 +21,11 @@ export default class HQRWriter {
   }
 
   write(): ArrayBuffer {
+    for (const entry of this.hqr.entries) {
+      if (entry) {
+        this.compressEntry(entry);
+      }
+    }
     const buffer = new ArrayBuffer(this.computeBufferSize());
     const entriesIndex = new Uint32Array(
       buffer,
@@ -43,6 +49,12 @@ export default class HQRWriter {
 
     entriesIndex[this.hqr.entries.length] = buffer.byteLength;
 
+    for (const entry of this.hqr.entries) {
+      if (entry) {
+        this.cleanupEntry(entry);
+      }
+    }
+
     return buffer;
   }
 
@@ -61,25 +73,61 @@ export default class HQRWriter {
     const hiddenEntriesSize = entry.next ? this.getEntrySize(entry.next) : 0;
     // TODO: Compute size of compressed entry here.
     // We're assuming that the entry is uncompressed for now.
-    return ENTRY_HEADER_SIZE + entry.content.byteLength + hiddenEntriesSize;
+    const contentSize = entry.metadata.compressedBuffer
+      ? entry.metadata.compressedBuffer.byteLength
+      : entry.content.byteLength;
+    return ENTRY_HEADER_SIZE + contentSize + hiddenEntriesSize;
+  }
+
+  compressEntry(entry: HQREntryBase) {
+    if (entry.next) {
+      this.compressEntry(entry.next);
+    }
+    // Compress type 2 as type 1 for now:
+    if (
+      entry.type === CompressionType.LZSS_LBA_TYPE_1 ||
+      entry.type === CompressionType.LZSS_LBA_TYPE_2
+    ) {
+      const compressedBuffer = compressLZSS_LBA(entry.content);
+      if (compressedBuffer.byteLength < entry.content.byteLength) {
+        entry.metadata.compressedBuffer = compressedBuffer;
+      }
+    }
+  }
+
+  cleanupEntry(entry: HQREntryBase): HQREntryBase {
+    if (entry.next) {
+      this.cleanupEntry(entry.next);
+    }
+    if (entry.metadata.compressedBuffer) {
+      delete entry.metadata.compressedBuffer;
+    }
+    return entry;
   }
 
   writeEntry(buffer: ArrayBuffer, offset: number, entry: HQREntryBase): number {
+    const entryContentCompressed = entry.metadata.compressedBuffer
+      ? entry.metadata.compressedBuffer
+      : entry.content;
+
     /* Write header */
     const entryHeaderView = new DataView(buffer, offset, ENTRY_HEADER_SIZE);
+    const type = entry.metadata.compressedBuffer
+      ? CompressionType.LZSS_LBA_TYPE_1 // Compress type 2 as type 1 for now:
+      : CompressionType.NONE;
     entryHeaderView.setUint32(0, entry.content.byteLength, true); // Original size
-    entryHeaderView.setUint32(4, entry.content.byteLength, true); // Compressed size
-    entryHeaderView.setUint16(8, CompressionType.NONE, true); // Compression type: forced to NONE for now
+    entryHeaderView.setUint32(4, entryContentCompressed.byteLength, true); // Compressed size
+    entryHeaderView.setUint16(8, type, true);
     offset += ENTRY_HEADER_SIZE;
 
     /* Write content */
-    const entryBuffer = new Uint8Array(
+    const entrySlice = new Uint8Array(
       buffer,
       offset,
-      entry.content.byteLength
+      entryContentCompressed.byteLength
     );
-    entryBuffer.set(new Uint8Array(entry.content));
-    offset += entry.content.byteLength;
+    entrySlice.set(new Uint8Array(entryContentCompressed));
+    offset += entryContentCompressed.byteLength;
 
     /* Write associated hidden entries */
     if (entry.next) {
