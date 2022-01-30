@@ -79,15 +79,16 @@ export default class HQRReader {
   }
 
   private readEntry(entryInfo: EntryInfo): HQREntryBase {
+    const metadata = {
+      offset: entryInfo.offset,
+      originalSize: entryInfo.originalSize,
+      compressedSize: entryInfo.compressedSize,
+    };
     if (this.options.lazyLoad) {
-      return new HQRLazyEntry(this.buffer, entryInfo, {
-        compressedSize: entryInfo.compressedSize,
-      });
+      return new HQRLazyEntry(this.buffer, entryInfo, metadata);
     }
 
     const content = decodeEntry(this.buffer, entryInfo);
-    return new HQREntry(content, entryInfo.type, {
-      compressedSize: entryInfo.compressedSize,
-    });
+    return new HQREntry(content, entryInfo.type, metadata);
   }
 }

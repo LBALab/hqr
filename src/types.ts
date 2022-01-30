@@ -5,6 +5,8 @@ export enum CompressionType {
 }
 
 export interface HQREntryMetadata extends Record<string, any> {
+  offset?: number;
+  originalSize?: number;
   compressedSize?: number;
   compressedBuffer?: ArrayBuffer;
 }
