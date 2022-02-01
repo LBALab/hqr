@@ -3,7 +3,7 @@ import HQRLazyEntry from './HQRLazyEntry';
 import HQRReader, { ReadOptions } from './HQRReader';
 import HQRWriter, { WriteOptions } from './HQRWriter';
 
-type HQREntryElement = HQREntry | HQRLazyEntry | null;
+export type HQREntryElement = HQREntry | HQRLazyEntry | null;
 
 export default class HQR {
   readonly entries: HQREntryElement[] = [];
