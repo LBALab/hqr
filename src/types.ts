@@ -17,3 +17,5 @@ export interface HQREntryBase {
   next?: HQREntryBase;
   readonly metadata: HQREntryMetadata;
 }
+
+export type HQREntryElement = HQREntryBase | null;
