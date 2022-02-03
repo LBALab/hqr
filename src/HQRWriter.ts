@@ -70,7 +70,10 @@ export default class HQRWriter {
   }
 
   getEntrySize(entry: HQREntryBase): number {
-    const hiddenEntriesSize = entry.next ? this.getEntrySize(entry.next) : 0;
+    let hiddenEntriesSize = 0;
+    for (const hiddenEntry of entry.hiddenEntries) {
+      hiddenEntriesSize += this.getEntrySize(hiddenEntry);
+    }
     // TODO: Compute size of compressed entry here.
     // We're assuming that the entry is uncompressed for now.
     const contentSize = entry.metadata.compressedBuffer
@@ -80,9 +83,6 @@ export default class HQRWriter {
   }
 
   compressEntry(entry: HQREntryBase) {
-    if (entry.next) {
-      this.compressEntry(entry.next);
-    }
     // Compress type 2 as type 1 for now:
     if (
       entry.type === CompressionType.LZSS_LBA_TYPE_1 ||
@@ -93,14 +93,17 @@ export default class HQRWriter {
         entry.metadata.compressedBuffer = compressedBuffer;
       }
     }
+    for (const hiddenEntry of entry.hiddenEntries) {
+      this.compressEntry(hiddenEntry);
+    }
   }
 
   cleanupEntry(entry: HQREntryBase): HQREntryBase {
-    if (entry.next) {
-      this.cleanupEntry(entry.next);
-    }
     if (entry.metadata.compressedBuffer) {
       delete entry.metadata.compressedBuffer;
+    }
+    for (const hiddenEntry of entry.hiddenEntries) {
+      this.cleanupEntry(hiddenEntry);
     }
     return entry;
   }
@@ -130,8 +133,8 @@ export default class HQRWriter {
     offset += entryContentCompressed.byteLength;
 
     /* Write associated hidden entries */
-    if (entry.next) {
-      offset = this.writeEntry(buffer, offset, entry.next);
+    for (const hiddenEntry of entry.hiddenEntries) {
+      offset = this.writeEntry(buffer, offset, hiddenEntry);
     }
 
     return offset;

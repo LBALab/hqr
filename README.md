@@ -126,19 +126,14 @@ const { HQR } = require('@lbalab/hqr');
   const file = await fs.readFile(process.argv[2]);
   const hqr = HQR.fromArrayBuffer(file.buffer);
   for (let i = 0; i < hqr.entries.length; i++) {
-    let hiddenEntries = [];
-    let current = hqr.entries[i].next;
-    while (current) {
-      hiddenEntries.push(current);
-      current = current.next;
-    }
-    if (hiddenEntries.length > 0) {
-      console.log(`Entry ${i} has ${hiddenEntries.length} hidden entries:`);
-      let j = 0;
-      for (const entry of hiddenEntries) {
-        console.log(`  Hidden entry #${j}: ${entry.content.byteLength} bytes`);
-        j++;
-      }
+    const entry = hqr.entries[i];
+    if (!entry) continue;
+
+    console.log(`Entry ${i} has ${entry.hiddenEntries.length} hidden entries:`);
+    let j = 0;
+    for (const hEntry of entry.hiddenEntries) {
+      console.log(`  Hidden entry #${j}: ${hEntry.content.byteLength} bytes`);
+      j++;
     }
   }
 })();

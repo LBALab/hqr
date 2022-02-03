@@ -3,8 +3,8 @@ import { CompressionType, HQREntryBase, HQREntryMetadata } from './types';
 export default class HQREntry implements HQREntryBase {
   type: CompressionType;
   content: ArrayBuffer;
-  next?: HQREntry;
   readonly metadata: HQREntryMetadata;
+  readonly hiddenEntries: HQREntryBase[] = [];
 
   constructor(
     content: ArrayBuffer,

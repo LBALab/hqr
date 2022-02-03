@@ -74,7 +74,9 @@ describe('Misc features', () => {
     hqr.entries.push(new HQREntry(new ArrayBuffer(128), CompressionType.NONE));
     const last = new HQREntry(new ArrayBuffer(64), CompressionType.NONE);
     hqr.entries.push(last);
-    last.next = new HQREntry(new ArrayBuffer(8), CompressionType.NONE);
+    last.hiddenEntries.push(
+      new HQREntry(new ArrayBuffer(8), CompressionType.NONE)
+    );
     hqr.dump();
     expect(consoleLogMock.mock.calls).toEqual([
       ['0: type=0 size=12 compressed=?'],

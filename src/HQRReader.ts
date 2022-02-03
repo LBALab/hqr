@@ -51,13 +51,11 @@ export default class HQRReader {
 
       /* Read associated hidden entries */
       const nextOffset = entriesIndex[i + 1];
-      let previousEntry = entry;
       let computedOffset = this.computeNextOffset(entryInfo);
       while (computedOffset < nextOffset) {
         const hiddenEntryInfo = this.readEntryInfo(computedOffset);
         const hiddenEntry = this.readEntry(hiddenEntryInfo);
-        previousEntry.next = hiddenEntry;
-        previousEntry = hiddenEntry;
+        entry.hiddenEntries.push(hiddenEntry);
         computedOffset = this.computeNextOffset(hiddenEntryInfo);
       }
     }

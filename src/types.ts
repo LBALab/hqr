@@ -14,7 +14,7 @@ export interface HQREntryMetadata extends Record<string, any> {
 export interface HQREntryBase {
   type: CompressionType;
   content: ArrayBuffer;
-  next?: HQREntryBase;
+  readonly hiddenEntries: HQREntryBase[];
   readonly metadata: HQREntryMetadata;
 }
 

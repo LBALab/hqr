@@ -11,9 +11,9 @@ describe('Hidden entries', () => {
     expect(hqr.entries[0]?.content.byteLength).toBe(32);
     const entryWithHidden = hqr.entries[1];
     expect(entryWithHidden?.content.byteLength).toBe(512);
-    expect(entryWithHidden?.next?.content.byteLength).toBe(454);
-    expect(entryWithHidden?.next?.next?.content.byteLength).toBe(12);
-    expect(entryWithHidden?.next?.next?.next).toBeUndefined();
+    expect(entryWithHidden?.hiddenEntries.length).toBe(2);
+    expect(entryWithHidden?.hiddenEntries[0].content.byteLength).toBe(454);
+    expect(entryWithHidden?.hiddenEntries[1].content.byteLength).toBe(12);
     expect(hqr.entries[2]?.content.byteLength).toBe(64);
   });
 
@@ -23,9 +23,9 @@ describe('Hidden entries', () => {
     const hqr = HQR.fromArrayBuffer(file.buffer);
     expect(hqr.entries.length).toBe(3);
     expect(decodeEntry).toHaveBeenCalledTimes(0);
-    expect(hqr.entries[1]?.next?.next?.content.byteLength).toBe(12);
+    expect(hqr.entries[1]?.hiddenEntries[1].content.byteLength).toBe(12);
     expect(decodeEntry).toHaveBeenCalledTimes(1);
-    expect(hqr.entries[1]?.next?.content.byteLength).toBe(454);
+    expect(hqr.entries[1]?.hiddenEntries[0].content.byteLength).toBe(454);
     expect(decodeEntry).toHaveBeenCalledTimes(2);
     decodeEntry.mockClear();
   });
@@ -37,8 +37,8 @@ describe('Hidden entries', () => {
     expect(decodeEntry).toHaveBeenCalledTimes(5);
     expect(hqr.entries.length).toBe(3);
     decodeEntry.mockClear();
-    expect(hqr.entries[1]?.next?.next?.content.byteLength).toBe(12);
-    expect(hqr.entries[1]?.next?.content.byteLength).toBe(454);
+    expect(hqr.entries[1]?.hiddenEntries[1].content.byteLength).toBe(12);
+    expect(hqr.entries[1]?.hiddenEntries[0].content.byteLength).toBe(454);
     expect(decodeEntry).toHaveBeenCalledTimes(0);
     decodeEntry.mockClear();
   });
@@ -47,8 +47,28 @@ describe('Hidden entries', () => {
     const hqr = new HQR();
     hqr.entries.push(new HQREntry(new ArrayBuffer(32), CompressionType.NONE));
     const entry = new HQREntry(new ArrayBuffer(512), CompressionType.NONE);
-    entry.next = new HQREntry(new ArrayBuffer(454), CompressionType.NONE);
-    entry.next.next = new HQREntry(new ArrayBuffer(12), CompressionType.NONE);
+    entry.hiddenEntries.push(
+      new HQREntry(new ArrayBuffer(454), CompressionType.NONE)
+    );
+    entry.hiddenEntries.push(
+      new HQREntry(new ArrayBuffer(12), CompressionType.NONE)
+    );
+    hqr.entries.push(entry);
+    hqr.entries.push(new HQREntry(new ArrayBuffer(64), CompressionType.NONE));
+
+    await binaryCompare(hqr, 'HIDDEN.HQR');
+  });
+
+  it('should flatten hidden entries tree', async () => {
+    const hqr = new HQR();
+    hqr.entries.push(new HQREntry(new ArrayBuffer(32), CompressionType.NONE));
+    const entry = new HQREntry(new ArrayBuffer(512), CompressionType.NONE);
+    entry.hiddenEntries.push(
+      new HQREntry(new ArrayBuffer(454), CompressionType.NONE)
+    );
+    entry.hiddenEntries[0].hiddenEntries.push(
+      new HQREntry(new ArrayBuffer(12), CompressionType.NONE)
+    );
     hqr.entries.push(entry);
     hqr.entries.push(new HQREntry(new ArrayBuffer(64), CompressionType.NONE));
 

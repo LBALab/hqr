@@ -13,7 +13,7 @@ export default class HQRLazyEntry implements HQREntryBase {
   private readonly buffer: ArrayBuffer;
   private readonly info: EntryInfo;
   private _content?: ArrayBuffer;
-  next?: HQRLazyEntry;
+  readonly hiddenEntries: HQREntryBase[] = [];
   readonly metadata: HQREntryMetadata = {};
 
   get content(): ArrayBuffer {
