@@ -156,6 +156,10 @@ Entry 316 has 1 hidden entries:
 **/
 ```
 
+## Contributing
+
+Commit format should follow [Angular's commit guidelines][angular-commit-url].
+
 [build-img]: https://github.com/LBALab/hqr/actions/workflows/release.yml/badge.svg
 [build-url]: https://github.com/LBALab/hqr/actions/workflows/release.yml
 [downloads-img]: https://img.shields.io/npm/dt/@lbalab/hqr
@@ -171,3 +175,4 @@ Entry 316 has 1 hidden entries:
 [commitizen-img]: https://img.shields.io/badge/commitizen-friendly-brightgreen.svg
 [commitizen-url]: http://commitizen.github.io/cz-cli/
 [lba-file-info-url]: http://lbafileinfo.kaziq.net/index.php/Main_Page
+[angular-commit-url]: https://github.com/angular/angular/blob/master/CONTRIBUTING.md#commit
