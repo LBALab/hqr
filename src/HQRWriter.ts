@@ -122,6 +122,7 @@ export default class HQRWriter {
   cleanupEntry(entry: HQREntryBase): HQREntryBase {
     if (entry.metadata.compressedBuffer) {
       delete entry.metadata.compressedBuffer;
+      delete entry.metadata.forceUseType2;
     }
     for (const hiddenEntry of entry.hiddenEntries) {
       this.cleanupEntry(hiddenEntry);
