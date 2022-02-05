@@ -4,7 +4,7 @@ import HQR from './HQR';
 import { CompressionType, HQREntryBase } from './types';
 
 export interface WriteOptions {
-  skipCompression: boolean; // Always skipping compression for now
+  skipCompression: boolean;
 }
 
 const DEFAULT_OPTIONS: WriteOptions = {
@@ -85,8 +85,9 @@ export default class HQRWriter {
   compressEntry(entry: HQREntryBase) {
     // Compress type 2 as type 1 for now:
     if (
-      entry.type === CompressionType.LZSS_LBA_TYPE_1 ||
-      entry.type === CompressionType.LZSS_LBA_TYPE_2
+      (entry.type === CompressionType.LZSS_LBA_TYPE_1 ||
+        entry.type === CompressionType.LZSS_LBA_TYPE_2) &&
+      !this.options.skipCompression
     ) {
       const compressedBuffer = compressLZSS_LBA(entry.content);
       if (compressedBuffer.byteLength < entry.content.byteLength) {

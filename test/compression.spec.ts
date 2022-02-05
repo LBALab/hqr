@@ -75,6 +75,49 @@ describe('Compression', () => {
     expect(new DataView(hqr2.entries[2]!.content).getUint32(0, true)).toBe(42);
   });
 
+  it('should write a compressed HQR file, but skip compression', () => {
+    const hqr = new HQR();
+    const str = `Hello world!
+    This is a test with a string that should be compressable.
+    If it was too short it would not be compressable.
+    But with this length, it should.`;
+    hqr.entries.push(
+      new HQREntry(new ArrayBuffer(512), CompressionType.LZSS_LBA_TYPE_1)
+    );
+    hqr.entries.push(
+      new HQREntry(Buffer.from(str, 'utf-8'), CompressionType.LZSS_LBA_TYPE_1)
+    );
+    const numView = new DataView(new ArrayBuffer(4));
+    numView.setUint32(0, 42, true);
+    hqr.entries.push(
+      new HQREntry(numView.buffer, CompressionType.LZSS_LBA_TYPE_1)
+    );
+
+    // Write file to buffer
+    const compressedFile = hqr.toArrayBuffer({ skipCompression: true });
+    expect(compressedFile.byteLength).toBe(727);
+
+    // Read back file buffer
+    const hqr2 = HQR.fromArrayBuffer(compressedFile);
+    expect(hqr2.entries.length).toBe(3);
+    expect(hqr2.entries[0]?.type).toBe(CompressionType.NONE);
+    expect(hqr2.entries[0]?.content.byteLength).toBe(512);
+    expect(
+      Buffer.from(hqr2.entries[0]!.content).compare(
+        Buffer.from(hqr.entries[0]!.content)
+      )
+    ).toBe(0);
+    expect(hqr2.entries[1]?.type).toBe(CompressionType.NONE);
+    expect(hqr2.entries[1]?.content.byteLength).toBe(165);
+    expect(Buffer.from(hqr2.entries[1]!.content).toString('utf-8')).toEqual(
+      str
+    );
+    // Uncompressable entries are stored with CompressionType.NONE:
+    expect(hqr2.entries[2]?.type).toBe(CompressionType.NONE);
+    expect(hqr2.entries[2]?.content.byteLength).toBe(4);
+    expect(new DataView(hqr2.entries[2]!.content).getUint32(0, true)).toBe(42);
+  });
+
   describe('LZSS_LBA', () => {
     it('should compress big 5Mb empty buffer', () => {
       const buffer = new ArrayBuffer(5000000);
