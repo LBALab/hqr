@@ -1,4 +1,5 @@
 import { decodeEntry } from './compression';
+import { ENTRY_HEADER_SIZE } from './constants';
 import { EntryInfo } from './HQRReader';
 import { CompressionType, HQREntryBase, HQREntryMetadata } from './types';
 
@@ -15,6 +16,13 @@ export default class HQRLazyEntry implements HQREntryBase {
   private _content?: ArrayBuffer;
   readonly hiddenEntries: HQREntryBase[] = [];
   readonly metadata: HQREntryMetadata = {};
+
+  get compressedContent(): ArrayBuffer {
+    return this.buffer.slice(
+      this.info.offset + ENTRY_HEADER_SIZE,
+      this.info.offset + ENTRY_HEADER_SIZE + this.info.compressedSize
+    );
+  }
 
   get content(): ArrayBuffer {
     if (!this._content) {

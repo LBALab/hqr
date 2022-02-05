@@ -6,6 +6,7 @@ import {
   compressLZSS_LBA,
   decompressLZSS_LBA,
 } from '../src/compression/LZSS_LBA';
+import * as LZSS_LBA from '../src/compression/LZSS_LBA';
 import { readHQRFile } from './utils';
 
 describe('Compression', () => {
@@ -116,6 +117,17 @@ describe('Compression', () => {
     expect(hqr2.entries[2]?.type).toBe(CompressionType.NONE);
     expect(hqr2.entries[2]?.content.byteLength).toBe(4);
     expect(new DataView(hqr2.entries[2]!.content).getUint32(0, true)).toBe(42);
+  });
+
+  it('should read a file with compressed entries and fast recompile it', async () => {
+    const compressLZSS_LBA_mock = jest.spyOn(LZSS_LBA, 'compressLZSS_LBA');
+    const file = await readHQRFile('COMPRESSED.HQR');
+    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const compressedFile = hqr.toArrayBuffer({ fastRecompile: true });
+    expect(compressedFile.byteLength).toBe(file.byteLength);
+    expect(file.compare(Buffer.from(compressedFile))).toBe(0);
+    expect(compressLZSS_LBA_mock).toHaveBeenCalledTimes(0);
+    compressLZSS_LBA_mock.mockClear();
   });
 
   describe('LZSS_LBA', () => {

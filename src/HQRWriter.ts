@@ -1,14 +1,23 @@
 import { compressLZSS_LBA } from './compression/LZSS_LBA';
 import { ENTRY_HEADER_SIZE } from './constants';
 import HQR from './HQR';
+import HQRLazyEntry from './HQRLazyEntry';
 import { CompressionType, HQREntryBase } from './types';
 
 export interface WriteOptions {
   skipCompression: boolean;
+  /**
+   * This just copies the compressed entries from
+   * the source HQR if they are not modified.
+   * Modifications are marked with the `replacement`
+   * property in the metadata.
+   */
+  fastRecompile: boolean;
 }
 
 const DEFAULT_OPTIONS: WriteOptions = {
   skipCompression: false,
+  fastRecompile: false,
 };
 
 export default class HQRWriter {
@@ -83,15 +92,26 @@ export default class HQRWriter {
   }
 
   compressEntry(entry: HQREntryBase) {
-    // Compress type 2 as type 1 for now:
     if (
+      // Compress type 2 as type 1 for now:
       (entry.type === CompressionType.LZSS_LBA_TYPE_1 ||
         entry.type === CompressionType.LZSS_LBA_TYPE_2) &&
       !this.options.skipCompression
     ) {
-      const compressedBuffer = compressLZSS_LBA(entry.content);
-      if (compressedBuffer.byteLength < entry.content.byteLength) {
-        entry.metadata.compressedBuffer = compressedBuffer;
+      if (
+        this.options.fastRecompile &&
+        entry instanceof HQRLazyEntry &&
+        !entry.metadata.replacement
+      ) {
+        entry.metadata.compressedBuffer = entry.compressedContent;
+        if (entry.type === CompressionType.LZSS_LBA_TYPE_2) {
+          entry.metadata.forceUseType2 = true;
+        }
+      } else {
+        const compressedBuffer = compressLZSS_LBA(entry.content);
+        if (compressedBuffer.byteLength < entry.content.byteLength) {
+          entry.metadata.compressedBuffer = compressedBuffer;
+        }
       }
     }
     for (const hiddenEntry of entry.hiddenEntries) {
@@ -116,9 +136,15 @@ export default class HQRWriter {
 
     /* Write header */
     const entryHeaderView = new DataView(buffer, offset, ENTRY_HEADER_SIZE);
-    const type = entry.metadata.compressedBuffer
-      ? CompressionType.LZSS_LBA_TYPE_1 // Compress type 2 as type 1 for now:
-      : CompressionType.NONE;
+    let type = CompressionType.NONE;
+    if (entry.metadata.compressedBuffer) {
+      if (entry.metadata.forceUseType2) {
+        type = CompressionType.LZSS_LBA_TYPE_2;
+      } else {
+        // Compress type 2 as type 1 for now
+        type = CompressionType.LZSS_LBA_TYPE_1;
+      }
+    }
     entryHeaderView.setUint32(0, entry.content.byteLength, true); // Original size
     entryHeaderView.setUint32(4, entryContentCompressed.byteLength, true); // Compressed size
     entryHeaderView.setUint16(8, type, true);
