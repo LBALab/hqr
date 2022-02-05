@@ -48,10 +48,14 @@ const TREE_ROOT = WINDOW_SIZE;
 const UNUSED = -1;
 const MOD_WINDOW = (a: number) => a & (WINDOW_SIZE - 1);
 
+enum Child {
+  Smaller = 0,
+  Larger = 1,
+}
+
 interface DefTree {
   parent: number;
-  smaller_child: number;
-  larger_child: number;
+  children: [number, number];
 }
 
 let current_pos: number;
@@ -60,7 +64,7 @@ const win = new Uint8Array(WINDOW_SIZE * 5);
 const tree: DefTree[] = (() => {
   const t = new Array<DefTree>(WINDOW_SIZE + 2);
   for (let i = 0; i < t.length; i += 1) {
-    t[i] = { parent: 0, smaller_child: 0, larger_child: 0 };
+    t[i] = { parent: 0, children: [0, 0] };
   }
   return t;
 })();
@@ -69,52 +73,55 @@ function initTree(r: number) {
   for (let i = 0; i <= WINDOW_SIZE; i++) {
     const node = tree[i];
     node.parent = UNUSED;
-    node.smaller_child = UNUSED;
-    node.larger_child = UNUSED;
+    node.children[Child.Smaller] = UNUSED;
+    node.children[Child.Larger] = UNUSED;
   }
-  tree[TREE_ROOT].larger_child = r;
+  tree[TREE_ROOT].children[Child.Larger] = r;
   tree[r].parent = TREE_ROOT;
   tree[-1] = tree[WINDOW_SIZE + 1];
 }
 
 function contractNode(old_node: number, new_node: number) {
   tree[new_node].parent = tree[old_node].parent;
-  if (tree[tree[old_node].parent].larger_child === old_node)
-    tree[tree[old_node].parent].larger_child = new_node;
-  else tree[tree[old_node].parent].smaller_child = new_node;
+  if (tree[tree[old_node].parent].children[Child.Larger] === old_node)
+    tree[tree[old_node].parent].children[Child.Larger] = new_node;
+  else tree[tree[old_node].parent].children[Child.Smaller] = new_node;
   tree[old_node].parent = UNUSED;
 }
 
 function copyNode(new_node: number, old_node: number) {
   tree[new_node].parent = tree[old_node].parent;
-  tree[new_node].smaller_child = tree[old_node].smaller_child;
-  tree[new_node].larger_child = tree[old_node].larger_child;
+  tree[new_node].children[Child.Smaller] =
+    tree[old_node].children[Child.Smaller];
+  tree[new_node].children[Child.Larger] = tree[old_node].children[Child.Larger];
 }
 
 function replaceNode(old_node: number, new_node: number) {
   const parent = tree[old_node].parent;
-  if (tree[parent].smaller_child === old_node)
-    tree[parent].smaller_child = new_node;
-  else tree[parent].larger_child = new_node;
+  if (tree[parent].children[Child.Smaller] === old_node)
+    tree[parent].children[Child.Smaller] = new_node;
+  else tree[parent].children[Child.Larger] = new_node;
   copyNode(new_node, old_node);
-  if (tree[new_node].smaller_child !== UNUSED)
-    tree[tree[new_node].smaller_child].parent = new_node;
-  if (tree[new_node].larger_child !== UNUSED)
-    tree[tree[new_node].larger_child].parent = new_node;
+  if (tree[new_node].children[Child.Smaller] !== UNUSED)
+    tree[tree[new_node].children[Child.Smaller]].parent = new_node;
+  if (tree[new_node].children[Child.Larger] !== UNUSED)
+    tree[tree[new_node].children[Child.Larger]].parent = new_node;
   tree[old_node].parent = UNUSED;
 }
 
 function findNextNode(node: number) {
-  let next = tree[node].smaller_child;
-  while (tree[next].larger_child !== UNUSED) next = tree[next].larger_child;
+  let next = tree[node].children[Child.Smaller];
+  while (tree[next].children[Child.Larger] !== UNUSED)
+    next = tree[next].children[Child.Larger];
   return next;
 }
 
 function deleteString(p: number) {
   if (tree[p].parent === UNUSED) return;
-  if (tree[p].larger_child === UNUSED) contractNode(p, tree[p].smaller_child);
-  else if (tree[p].smaller_child === UNUSED)
-    contractNode(p, tree[p].larger_child);
+  if (tree[p].children[Child.Larger] === UNUSED)
+    contractNode(p, tree[p].children[Child.Smaller]);
+  else if (tree[p].children[Child.Smaller] === UNUSED)
+    contractNode(p, tree[p].children[Child.Larger]);
   else {
     const replacement = findNextNode(p);
     deleteString(replacement);
@@ -122,15 +129,10 @@ function deleteString(p: number) {
   }
 }
 
-interface ChildPropPtr {
-  node: DefTree;
-  prop: 'smaller_child' | 'larger_child';
-}
-
 function addString(): number {
   let i = 0;
   let delta = 0;
-  let test_node = tree[TREE_ROOT].larger_child;
+  let test_node = tree[TREE_ROOT].children[Child.Larger];
   let match_length = 0;
   for (;;) {
     for (i = 0; i < LOOK_AHEAD_SIZE; i++) {
@@ -145,18 +147,16 @@ function addString(): number {
         return match_length;
       }
     }
-    const child: ChildPropPtr = {
-      node: tree[test_node],
-      prop: delta >= 0 ? 'larger_child' : 'smaller_child',
-    };
-    if (child.node[child.prop] === UNUSED) {
-      child.node[child.prop] = current_pos;
+    const child_node = tree[test_node];
+    const child_prop = delta >= 0 ? Child.Larger : Child.Smaller;
+    if (child_node.children[child_prop] === UNUSED) {
+      child_node.children[child_prop] = current_pos;
       tree[current_pos].parent = test_node;
-      tree[current_pos].larger_child = UNUSED;
-      tree[current_pos].smaller_child = UNUSED;
+      tree[current_pos].children[Child.Larger] = UNUSED;
+      tree[current_pos].children[Child.Smaller] = UNUSED;
       return match_length;
     }
-    test_node = child.node[child.prop];
+    test_node = child_node.children[child_prop];
   }
 }
 
