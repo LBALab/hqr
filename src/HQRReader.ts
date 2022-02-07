@@ -58,6 +58,11 @@ export default class HQRReader {
       const entry = this.readEntry(hqr, entryInfo);
       hqr.entries.push(entry);
 
+      if (entry instanceof HQRVirtualEntry) {
+        /* Duplicate entries don't have hidden entries */
+        continue;
+      }
+
       /* Read associated hidden entries */
       const nextOffset = this.entriesIndex[i + 1];
       let computedOffset = this.computeNextOffset(entryInfo);

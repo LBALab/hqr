@@ -77,6 +77,21 @@ describe('Virtual entries', () => {
     await binaryCompare(hqr, 'VIRTUAL2.HQR');
   });
 
+  it('should not read intermediate entries as hidden entries when reading virtual entries', async () => {
+    const file = await readHQRFile('VIRTUAL3.HQR');
+    const hqr = HQR.fromArrayBuffer(file.buffer);
+
+    expect(hqr.entries.length).toBe(5);
+    expect(hqr.entries[0]?.content.byteLength).toBe(512);
+    expect(hqr.entries[1]?.content.byteLength).toBe(16);
+    expect(hqr.entries[2]?.content.byteLength).toBe(24);
+    expect(hqr.entries[3]?.content.byteLength).toBe(54);
+    expect(hqr.entries[4]?.content.byteLength).toBe(512);
+
+    expect(hqr.entries[4]).toBeInstanceOf(HQRVirtualEntry);
+    expect(hqr.entries[4]?.hiddenEntries.length).toBe(0);
+  });
+
   it('should treat invalid virtual entries as blank entries, and display warnings', () => {
     const consoleWarnMock = jest
       .spyOn(console, 'warn')
