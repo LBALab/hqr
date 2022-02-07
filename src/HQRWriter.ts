@@ -2,6 +2,7 @@ import { compressLZSS_LBA } from './compression/LZSS_LBA';
 import { ENTRY_HEADER_SIZE } from './constants';
 import HQR from './HQR';
 import HQRLazyEntry from './HQRLazyEntry';
+import HQRVirtualEntry from './HQRVirtualEntry';
 import { CompressionType, HQREntryBase } from './types';
 
 export interface WriteOptions {
@@ -41,6 +42,8 @@ export default class HQRWriter {
       0,
       this.hqr.entries.length + 1
     );
+    // [virtualEntryIndex, targetIndex]
+    const virtualEntries: [number, number][] = [];
 
     let offset = this.hqr.entries.length * 4 + 4;
     for (let i = 0; i < this.hqr.entries.length; i += 1) {
@@ -52,8 +55,22 @@ export default class HQRWriter {
         continue;
       }
 
+      if (entry instanceof HQRVirtualEntry) {
+        if (entry.isValid()) {
+          virtualEntries.push([i, entry.target]);
+        } else {
+          console.warn(`Found invalid virtual entry at index ${i}`);
+          entriesIndex[i] = 0;
+        }
+        continue;
+      }
+
       entriesIndex[i] = offset;
       offset = this.writeEntry(buffer, offset, entry);
+    }
+
+    for (const [virtualEntryIndex, tgtIndex] of virtualEntries) {
+      entriesIndex[virtualEntryIndex] = entriesIndex[tgtIndex];
     }
 
     entriesIndex[this.hqr.entries.length] = buffer.byteLength;
@@ -79,6 +96,10 @@ export default class HQRWriter {
   }
 
   getEntrySize(entry: HQREntryBase): number {
+    if (entry instanceof HQRVirtualEntry) {
+      return 0;
+    }
+
     let hiddenEntriesSize = 0;
     for (const hiddenEntry of entry.hiddenEntries) {
       hiddenEntriesSize += this.getEntrySize(hiddenEntry);
@@ -92,17 +113,25 @@ export default class HQRWriter {
   }
 
   compressEntry(entry: HQREntryBase) {
+    if (entry instanceof HQRVirtualEntry) {
+      return;
+    }
+
+    if (this.options.skipCompression) {
+      return;
+    }
+
     if (
       // Compress type 2 as type 1 for now:
-      (entry.type === CompressionType.LZSS_LBA_TYPE_1 ||
-        entry.type === CompressionType.LZSS_LBA_TYPE_2) &&
-      !this.options.skipCompression
+      entry.type === CompressionType.LZSS_LBA_TYPE_1 ||
+      entry.type === CompressionType.LZSS_LBA_TYPE_2
     ) {
-      if (
+      const copyCompressedBuffer =
         this.options.fastRecompile &&
         entry instanceof HQRLazyEntry &&
-        !entry.metadata.replacement
-      ) {
+        !entry.metadata.replacement;
+
+      if (copyCompressedBuffer) {
         entry.metadata.compressedBuffer = entry.compressedContent;
         if (entry.type === CompressionType.LZSS_LBA_TYPE_2) {
           entry.metadata.forceUseType2 = true;
@@ -114,6 +143,7 @@ export default class HQRWriter {
         }
       }
     }
+
     for (const hiddenEntry of entry.hiddenEntries) {
       this.compressEntry(hiddenEntry);
     }

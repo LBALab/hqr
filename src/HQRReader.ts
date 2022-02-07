@@ -4,6 +4,8 @@ import { CompressionType, HQREntryBase } from './types';
 import HQREntry from './HQREntry';
 import HQRLazyEntry from './HQRLazyEntry';
 import { decodeEntry } from './compression';
+import HQRVirtualEntry from './HQRVirtualEntry';
+import { HQREntryMetadata } from '.';
 
 export interface EntryInfo {
   type: CompressionType;
@@ -25,36 +27,43 @@ export default class HQRReader {
   readonly buffer: ArrayBuffer;
   readonly options: ReadOptions;
 
+  private maxOffset = -1;
+  private numEntries: number;
+  private entriesIndex: Uint32Array;
+
   constructor(buffer: ArrayBuffer, options: Partial<ReadOptions>) {
     this.buffer = buffer;
     this.options = { ...DEFAULT_OPTIONS, ...options };
+
+    const firstOffset = new DataView(this.buffer, 0, 4).getUint32(0, true);
+
+    this.numEntries = firstOffset / 4 - 1;
+    this.entriesIndex = new Uint32Array(this.buffer, 0, this.numEntries + 1);
   }
 
   read(): HQR {
     const hqr = new HQR();
 
-    const firstOffset = new DataView(this.buffer, 0, 4).getUint32(0, true);
-    const numEntries = firstOffset / 4 - 1;
-    const entriesIndex = new Uint32Array(this.buffer, 0, numEntries + 1);
+    this.maxOffset = -1;
 
-    for (let i = 0; i < numEntries; i += 1) {
-      if (entriesIndex[i] === 0) {
+    for (let i = 0; i < this.numEntries; i += 1) {
+      if (this.entriesIndex[i] === 0) {
         /* Read blank entry as null */
         hqr.entries.push(null);
         continue;
       }
 
       /* Read entry */
-      const entryInfo = this.readEntryInfo(entriesIndex[i]);
-      const entry = this.readEntry(entryInfo);
+      const entryInfo = this.readEntryInfo(this.entriesIndex[i]);
+      const entry = this.readEntry(hqr, entryInfo);
       hqr.entries.push(entry);
 
       /* Read associated hidden entries */
-      const nextOffset = entriesIndex[i + 1];
+      const nextOffset = this.entriesIndex[i + 1];
       let computedOffset = this.computeNextOffset(entryInfo);
       while (computedOffset < nextOffset) {
         const hiddenEntryInfo = this.readEntryInfo(computedOffset);
-        const hiddenEntry = this.readEntry(hiddenEntryInfo);
+        const hiddenEntry = this.readEntry(hqr, hiddenEntryInfo);
         entry.hiddenEntries.push(hiddenEntry);
         computedOffset = this.computeNextOffset(hiddenEntryInfo);
       }
@@ -76,12 +85,25 @@ export default class HQRReader {
     };
   }
 
-  private readEntry(entryInfo: EntryInfo): HQREntryBase {
-    const metadata = {
+  private readEntry(hqr: HQR, entryInfo: EntryInfo): HQREntryBase {
+    const metadata: HQREntryMetadata = {
       offset: entryInfo.offset,
       originalSize: entryInfo.originalSize,
       compressedSize: entryInfo.compressedSize,
+      virtual: false,
     };
+
+    if (entryInfo.offset <= this.maxOffset) {
+      const index = this.entriesIndex.findIndex(
+        offset => entryInfo.offset === offset
+      );
+      metadata.virtual = true;
+      metadata.target = index;
+      return new HQRVirtualEntry(hqr, index, metadata);
+    }
+
+    this.maxOffset = Math.max(this.maxOffset, entryInfo.offset);
+
     if (this.options.lazyLoad) {
       return new HQRLazyEntry(this.buffer, entryInfo, metadata);
     }

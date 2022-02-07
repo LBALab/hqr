@@ -10,6 +10,8 @@ export interface HQREntryMetadata extends Record<string, any> {
   compressedSize?: number;
   compressedBuffer?: ArrayBuffer;
   replacement?: string;
+  virtual?: boolean;
+  target?: number;
 }
 
 export interface HQREntryBase {
