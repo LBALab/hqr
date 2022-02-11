@@ -2,11 +2,11 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { CompressionType, HQR, HQREntry } from '../src';
-import {
-  compressLZSS_LBA,
-  decompressLZSS_LBA,
-} from '../src/compression/LZSS_LBA';
-import * as LZSS_LBA from '../src/compression/LZSS_LBA';
+import { decompressLZSS_LBA } from '../src/compression/LZSS_LBA';
+import { compressLZSS_LBA_type_1 } from '../src/compression/LZSS_LBA_type_1';
+import { compressLZSS_LBA_type_2 } from '../src/compression/LZSS_LBA_type_2';
+import * as LZSS_LBA_type_1 from '../src/compression/LZSS_LBA_type_1';
+import * as LZSS_LBA_type_2 from '../src/compression/LZSS_LBA_type_2';
 import { readHQRFile } from './utils';
 
 describe('Compression', () => {
@@ -43,7 +43,7 @@ describe('Compression', () => {
       new HQREntry(new ArrayBuffer(512), CompressionType.LZSS_LBA_TYPE_1)
     );
     hqr.entries.push(
-      new HQREntry(Buffer.from(str, 'utf-8'), CompressionType.LZSS_LBA_TYPE_1)
+      new HQREntry(Buffer.from(str, 'utf-8'), CompressionType.LZSS_LBA_TYPE_2)
     );
     const numView = new DataView(new ArrayBuffer(4));
     numView.setUint32(0, 42, true);
@@ -53,7 +53,7 @@ describe('Compression', () => {
 
     // Write file to buffer
     const compressedFile = hqr.toArrayBuffer();
-    expect(compressedFile.byteLength).toBe(251);
+    expect(compressedFile.byteLength).toBe(249);
 
     // Read back file buffer
     const hqr2 = HQR.fromArrayBuffer(compressedFile);
@@ -65,7 +65,7 @@ describe('Compression', () => {
         Buffer.from(hqr.entries[0]!.content)
       )
     ).toBe(0);
-    expect(hqr2.entries[1]?.type).toBe(CompressionType.LZSS_LBA_TYPE_1);
+    expect(hqr2.entries[1]?.type).toBe(CompressionType.LZSS_LBA_TYPE_2);
     expect(hqr2.entries[1]?.content.byteLength).toBe(165);
     expect(Buffer.from(hqr2.entries[1]!.content).toString('utf-8')).toEqual(
       str
@@ -120,22 +120,51 @@ describe('Compression', () => {
   });
 
   it('should read a file with compressed entries and fast recompile it', async () => {
-    const compressLZSS_LBA_mock = jest.spyOn(LZSS_LBA, 'compressLZSS_LBA');
+    const compressLZSS_LBA_t1_mock = jest.spyOn(
+      LZSS_LBA_type_1,
+      'compressLZSS_LBA_type_1'
+    );
+    const compressLZSS_LBA_t2_mock = jest.spyOn(
+      LZSS_LBA_type_2,
+      'compressLZSS_LBA_type_2'
+    );
     const file = await readHQRFile('COMPRESSED.HQR');
     const hqr = HQR.fromArrayBuffer(file.buffer);
     const compressedFile = hqr.toArrayBuffer({ fastRecompile: true });
     expect(compressedFile.byteLength).toBe(file.byteLength);
     expect(file.compare(Buffer.from(compressedFile))).toBe(0);
-    expect(compressLZSS_LBA_mock).toHaveBeenCalledTimes(0);
-    compressLZSS_LBA_mock.mockClear();
+    expect(compressLZSS_LBA_t1_mock).toHaveBeenCalledTimes(0);
+    expect(compressLZSS_LBA_t2_mock).toHaveBeenCalledTimes(0);
+    compressLZSS_LBA_t1_mock.mockClear();
+    compressLZSS_LBA_t2_mock.mockClear();
   });
 
-  describe('LZSS_LBA', () => {
+  testCompressionAlgorithm(
+    compressLZSS_LBA_type_1,
+    CompressionType.LZSS_LBA_TYPE_1
+  );
+
+  testCompressionAlgorithm(
+    compressLZSS_LBA_type_2,
+    CompressionType.LZSS_LBA_TYPE_2
+  );
+});
+
+function testCompressionAlgorithm(
+  compressor: (data: ArrayBuffer) => ArrayBuffer,
+  compressionType: CompressionType
+) {
+  describe(`LZSS-LBA type ${compressionType}`, () => {
     it('should compress big 5Mb empty buffer', () => {
       const buffer = new ArrayBuffer(5000000);
-      const compressed = compressLZSS_LBA(buffer);
+      const compressed = compressor(buffer);
       expect(compressed.byteLength).toBeLessThan(buffer.byteLength);
-      const decomp = decompressLZSS_LBA(compressed, buffer.byteLength, 1);
+      const decomp = decompressLZSS_LBA(
+        compressed,
+        buffer.byteLength,
+        compressionType
+      );
+      expect(decomp.byteLength).toStrictEqual(buffer.byteLength);
       expect(Buffer.from(decomp).compare(Buffer.from(buffer))).toBe(0);
     });
 
@@ -143,9 +172,14 @@ describe('Compression', () => {
       const lorem = `lorem${i}.txt`;
       it(`should compress ${lorem} and uncompress to the same result`, async () => {
         const file = await fs.readFile(path.join(__dirname, `./data/${lorem}`));
-        const compressed = compressLZSS_LBA(file.buffer);
+        const compressed = compressor(file.buffer);
         expect(compressed.byteLength).toBeLessThan(file.byteLength);
-        const decomp = decompressLZSS_LBA(compressed, file.byteLength, 1);
+        const decomp = decompressLZSS_LBA(
+          compressed,
+          file.byteLength,
+          compressionType
+        );
+        expect(decomp.byteLength).toStrictEqual(file.byteLength);
         expect(Buffer.from(decomp).compare(file)).toBe(0);
       });
     }
@@ -158,9 +192,14 @@ describe('Compression', () => {
         for (let i = 0; i < size; i++) {
           ui8[i] = 128 + Math.random() * 16;
         }
-        const compressed = compressLZSS_LBA(buffer);
+        const compressed = compressor(buffer);
         expect(compressed.byteLength).toBeLessThanOrEqual(buffer.byteLength);
-        const decomp = decompressLZSS_LBA(compressed, buffer.byteLength, 1);
+        const decomp = decompressLZSS_LBA(
+          compressed,
+          buffer.byteLength,
+          compressionType
+        );
+        expect(decomp.byteLength).toStrictEqual(buffer.byteLength);
         expect(Buffer.from(decomp).compare(Buffer.from(buffer))).toBe(0);
       });
     }
@@ -197,9 +236,14 @@ describe('Compression', () => {
         }
       }
       it(`should compress buffer #${i} of random size ${buffer.byteLength}`, () => {
-        const compressed = compressLZSS_LBA(buffer);
+        const compressed = compressor(buffer);
         expect(compressed.byteLength).toBeLessThanOrEqual(buffer.byteLength);
-        const decomp = decompressLZSS_LBA(compressed, buffer.byteLength, 1);
+        const decomp = decompressLZSS_LBA(
+          compressed,
+          buffer.byteLength,
+          compressionType
+        );
+        expect(decomp.byteLength).toStrictEqual(buffer.byteLength);
         expect(Buffer.from(decomp).compare(Buffer.from(buffer))).toBe(0);
       });
     }
@@ -215,11 +259,16 @@ describe('Compression', () => {
         const file = await fs.readFile(
           path.join(__dirname, `./data/${rareCase}.bin`)
         );
-        const compressed = compressLZSS_LBA(file.buffer);
+        const compressed = compressor(file.buffer);
         expect(compressed.byteLength).toBeLessThanOrEqual(file.byteLength);
-        const decomp = decompressLZSS_LBA(compressed, file.byteLength, 1);
+        const decomp = decompressLZSS_LBA(
+          compressed,
+          file.byteLength,
+          compressionType
+        );
+        expect(decomp.byteLength).toStrictEqual(file.byteLength);
         expect(Buffer.from(decomp).compare(file)).toBe(0);
       });
     }
   });
-});
+}

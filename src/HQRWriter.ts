@@ -1,4 +1,5 @@
-import { compressLZSS_LBA } from './compression/LZSS_LBA';
+import { compressLZSS_LBA_type_1 } from './compression/LZSS_LBA_type_1';
+import { compressLZSS_LBA_type_2 } from './compression/LZSS_LBA_type_2';
 import { ENTRY_HEADER_SIZE } from './constants';
 import HQR from './HQR';
 import HQRLazyEntry from './HQRLazyEntry';
@@ -133,11 +134,17 @@ export default class HQRWriter {
 
       if (copyCompressedBuffer) {
         entry.metadata.compressedBuffer = entry.compressedContent;
-        if (entry.type === CompressionType.LZSS_LBA_TYPE_2) {
-          entry.metadata.forceUseType2 = true;
-        }
       } else {
-        const compressedBuffer = compressLZSS_LBA(entry.content);
+        let compressFunc;
+        switch (entry.type) {
+          case CompressionType.LZSS_LBA_TYPE_1:
+            compressFunc = compressLZSS_LBA_type_1;
+            break;
+          case CompressionType.LZSS_LBA_TYPE_2:
+            compressFunc = compressLZSS_LBA_type_2;
+            break;
+        }
+        const compressedBuffer = compressFunc(entry.content);
         if (compressedBuffer.byteLength < entry.content.byteLength) {
           entry.metadata.compressedBuffer = compressedBuffer;
         }
@@ -152,7 +159,6 @@ export default class HQRWriter {
   cleanupEntry(entry: HQREntryBase): HQREntryBase {
     if (entry.metadata.compressedBuffer) {
       delete entry.metadata.compressedBuffer;
-      delete entry.metadata.forceUseType2;
     }
     for (const hiddenEntry of entry.hiddenEntries) {
       this.cleanupEntry(hiddenEntry);
@@ -169,12 +175,7 @@ export default class HQRWriter {
     const entryHeaderView = new DataView(buffer, offset, ENTRY_HEADER_SIZE);
     let type = CompressionType.NONE;
     if (entry.metadata.compressedBuffer) {
-      if (entry.metadata.forceUseType2) {
-        type = CompressionType.LZSS_LBA_TYPE_2;
-      } else {
-        // Compress type 2 as type 1 for now
-        type = CompressionType.LZSS_LBA_TYPE_1;
-      }
+      type = entry.type;
     }
     entryHeaderView.setUint32(0, entry.content.byteLength, true); // Original size
     entryHeaderView.setUint32(4, entryContentCompressed.byteLength, true); // Compressed size
