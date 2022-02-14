@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { CompressionType, HQR, HQREntry } from '../src';
-import HQRVirtualEntry from '../src/HQRVirtualEntry';
+import { CompressionType, HQR, HQREntry, HQRVirtualEntry } from '../src';
 import { binaryCompare, readHQRFile } from './utils';
 
 describe('Virtual entries', () => {
