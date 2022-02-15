@@ -12,7 +12,9 @@ import { readHQRFile } from './utils';
 describe('Compression', () => {
   it('should read a file with compressed entries', async () => {
     const file = await readHQRFile('COMPRESSED.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     expect(hqr.entries.length).toBe(3);
     expect(hqr.entries[0]?.type).toBe(CompressionType.NONE);
     expect(hqr.entries[0]?.content.byteLength).toBe(128);
@@ -28,9 +30,12 @@ describe('Compression', () => {
    */
   it('should throw an exception on invalid HQR compression type', async () => {
     const file = await readHQRFile('INVALID.HQR');
-    expect(() => HQR.fromArrayBuffer(file.buffer, { lazyLoad: false })).toThrow(
-      'Unknown compression type: 3'
-    );
+    expect(() =>
+      HQR.fromArrayBuffer(
+        file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength),
+        { lazyLoad: false }
+      )
+    ).toThrow('Unknown compression type: 3');
   });
 
   it('should write a compressed HQR file, and read back the proper content', () => {
@@ -129,7 +134,9 @@ describe('Compression', () => {
       'compressLZSS_LBA_type_2'
     );
     const file = await readHQRFile('COMPRESSED.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     const compressedFile = hqr.toArrayBuffer({ fastRecompile: true });
     expect(compressedFile.byteLength).toBe(file.byteLength);
     expect(file.compare(Buffer.from(compressedFile))).toBe(0);
@@ -172,7 +179,9 @@ function testCompressionAlgorithm(
       const lorem = `lorem${i}.txt`;
       it(`should compress ${lorem} and uncompress to the same result`, async () => {
         const file = await fs.readFile(path.join(__dirname, `./data/${lorem}`));
-        const compressed = compressor(file.buffer);
+        const compressed = compressor(
+          file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+        );
         expect(compressed.byteLength).toBeLessThan(file.byteLength);
         const decomp = decompressLZSS_LBA(
           compressed,
@@ -259,7 +268,9 @@ function testCompressionAlgorithm(
         const file = await fs.readFile(
           path.join(__dirname, `./data/${rareCase}.bin`)
         );
-        const compressed = compressor(file.buffer);
+        const compressed = compressor(
+          file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+        );
         expect(compressed.byteLength).toBeLessThanOrEqual(file.byteLength);
         const decomp = decompressLZSS_LBA(
           compressed,

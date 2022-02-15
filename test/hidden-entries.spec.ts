@@ -6,7 +6,9 @@ import { CompressionType } from '../src/types';
 describe('Hidden entries', () => {
   it('should read a HQR file with hidden entries', async () => {
     const file = await readHQRFile('HIDDEN.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     expect(hqr.entries.length).toBe(3);
     expect(hqr.entries[0]?.content.byteLength).toBe(32);
     const entryWithHidden = hqr.entries[1];
@@ -20,7 +22,9 @@ describe('Hidden entries', () => {
   it('should lazily read hidden entries, out of order', async () => {
     const decodeEntry = jest.spyOn(compression, 'decodeEntry');
     const file = await readHQRFile('HIDDEN.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     expect(hqr.entries.length).toBe(3);
     expect(decodeEntry).toHaveBeenCalledTimes(0);
     expect(hqr.entries[1]?.hiddenEntries[1].content.byteLength).toBe(12);
@@ -33,7 +37,10 @@ describe('Hidden entries', () => {
   it('should read a HQR file with hidden entries, without lazy loading', async () => {
     const decodeEntry = jest.spyOn(compression, 'decodeEntry');
     const file = await readHQRFile('HIDDEN.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer, { lazyLoad: false });
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength),
+      { lazyLoad: false }
+    );
     expect(decodeEntry).toHaveBeenCalledTimes(5);
     expect(hqr.entries.length).toBe(3);
     decodeEntry.mockClear();

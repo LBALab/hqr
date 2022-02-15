@@ -5,7 +5,9 @@ import { binaryCompare, readHQRFile } from './utils';
 describe('Virtual entries', () => {
   it('should find virtual entries in VIRTUAL.HQR', async () => {
     const file = await readHQRFile('VIRTUAL.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
 
     const virtual = hqr.entries.filter(
       entry => entry && entry instanceof HQRVirtualEntry
@@ -15,7 +17,9 @@ describe('Virtual entries', () => {
 
   it('should find expected virtual entries content in VIRTUAL2.HQR', async () => {
     const file = await readHQRFile('VIRTUAL2.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
 
     expect(hqr.entries[0]?.type).toBe(CompressionType.NONE);
     expect(hqr.entries[0]?.content.byteLength).toBe(25);
@@ -39,7 +43,9 @@ describe('Virtual entries', () => {
 
   it('should recompress VIRTUAL.HQR and result in the same file', async () => {
     const file = await readHQRFile('VIRTUAL.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
 
     const compressedFile = hqr.toArrayBuffer({ fastRecompile: true });
     expect(compressedFile.byteLength).toBe(file.byteLength);
@@ -58,7 +64,9 @@ describe('Virtual entries', () => {
 
   it('should write a binary equivalent of VIRTUAL2.HQR', async () => {
     const file = await readHQRFile('VIRTUAL2.HQR');
-    const original = HQR.fromArrayBuffer(file.buffer);
+    const original = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
 
     const hqr = new HQR();
     hqr.entries.push(
@@ -78,7 +86,9 @@ describe('Virtual entries', () => {
 
   it('should not read intermediate entries as hidden entries when reading virtual entries', async () => {
     const file = await readHQRFile('VIRTUAL3.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
 
     expect(hqr.entries.length).toBe(5);
     expect(hqr.entries[0]?.content.byteLength).toBe(512);

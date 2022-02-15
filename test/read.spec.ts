@@ -10,7 +10,9 @@ describe('Read HQR files', () => {
    */
   it('should read a simple HQR file', async () => {
     const file = await readHQRFile('SIMPLE.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     expect(hqr.entries.length).toBe(3);
     expect(hqr.entries[0]?.content.byteLength).toBe(512);
     const buffer = Buffer.from(hqr.entries[1]?.content as ArrayBuffer);
@@ -26,7 +28,9 @@ describe('Read HQR files', () => {
    */
   it('should read a HQR file with many entries', async () => {
     const file = await readHQRFile('MANY.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     expect(hqr.entries.length).toBe(50000);
     const lengths = hqr.entries.map(entry => entry?.content.byteLength);
     expect(lengths.find(l => l === undefined || l < 0 || l >= 128)).toBe(
@@ -39,7 +43,9 @@ describe('Read HQR files', () => {
    */
   it('should read blank entries', async () => {
     const file = await readHQRFile('BLANKS.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     expect(hqr.entries.length).toBe(4);
     expect(hqr.entries[0]?.content.byteLength).toBe(128);
     expect(hqr.entries[1]).toBeNull();
@@ -52,7 +58,9 @@ describe('Read HQR files', () => {
    */
   it('should read a big HQR file', async () => {
     const file = await readHQRFile('BIG.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     expect(hqr.entries.length).toBe(1);
     expect(hqr.entries[0]?.content.byteLength).toBe(4000000);
   });

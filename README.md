@@ -33,7 +33,9 @@ const { HQR } = require('@lbalab/hqr');
 
 (async () => {
   const file = await fs.readFile('LBA2/RESS.HQR');
-  const hqr = HQR.fromArrayBuffer(file.buffer);
+  const hqr = HQR.fromArrayBuffer(
+    file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+  );
   console.log(hqr.entries[0].content); // main game palette as an ArrayBuffer
 })();
 ```
@@ -51,7 +53,9 @@ const { HQR } = require('@lbalab/hqr');
  */
 (async () => {
   const file = await fs.readFile('LBA2/CITADEL.OBL');
-  const hqr = HQR.fromArrayBuffer(file.buffer);
+  const hqr = HQR.fromArrayBuffer(
+    file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+  );
   const tmp = hqr.entries[0];
   hqr.entries[0] = hqr.entries[4];
   hqr.entries[4] = tmp;
@@ -67,7 +71,9 @@ const { HQR } = require('@lbalab/hqr');
 
 (async () => {
   const file = await fs.readFile('LBA2/TEXT.HQR');
-  const hqr = HQR.fromArrayBuffer(file.buffer);
+  const hqr = HQR.fromArrayBuffer(
+    file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+  );
   const textBank = new Uint8Array(hqr.entries[1].content);
   /* The string "Resume Game" is at offset 943.
    ** Let's replace the letters e => é.
@@ -124,7 +130,9 @@ const { HQR } = require('@lbalab/hqr');
     process.exit(1);
   }
   const file = await fs.readFile(process.argv[2]);
-  const hqr = HQR.fromArrayBuffer(file.buffer);
+  const hqr = HQR.fromArrayBuffer(
+    file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+  );
   for (let i = 0; i < hqr.entries.length; i++) {
     const entry = hqr.entries[i];
     if (!entry) continue;

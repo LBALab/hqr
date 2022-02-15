@@ -7,7 +7,9 @@ describe('Misc features', () => {
       // do nothing
     });
     const file = await readHQRFile('SIMPLE.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     hqr.dump();
     expect(consoleLogMock.mock.calls).toEqual([
       ['0: type=0 size=512 compressed=512'],
@@ -22,7 +24,9 @@ describe('Misc features', () => {
       // do nothing
     });
     const file = await readHQRFile('HIDDEN.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     hqr.dump();
     expect(consoleLogMock.mock.calls).toEqual([
       ['0: type=0 size=32 compressed=32'],
@@ -39,7 +43,9 @@ describe('Misc features', () => {
       // do nothing
     });
     const file = await readHQRFile('COMPRESSED.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     hqr.dump();
     expect(consoleLogMock.mock.calls).toEqual([
       ['0: type=0 size=128 compressed=128'],
@@ -54,7 +60,9 @@ describe('Misc features', () => {
       // do nothing
     });
     const file = await readHQRFile('BLANKS.HQR');
-    const hqr = HQR.fromArrayBuffer(file.buffer);
+    const hqr = HQR.fromArrayBuffer(
+      file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
+    );
     hqr.dump();
     expect(consoleLogMock.mock.calls).toEqual([
       ['0: type=0 size=128 compressed=128'],
