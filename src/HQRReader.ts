@@ -64,7 +64,15 @@ export default class HQRReader {
       }
 
       /* Read associated hidden entries */
-      const nextOffset = this.entriesIndex[i + 1];
+      let nextOffset = 0;
+      /* search for next non empty entry */
+      for (let j = i + 1; !nextOffset && j < this.numEntries; j += 1) {
+        nextOffset = this.entriesIndex[j];
+      }
+      /* when entry is the latest non empty, use HQR size as nextOffset */
+      if (!nextOffset) {
+        nextOffset = this.buffer.byteLength;
+      }
       let computedOffset = this.computeNextOffset(entryInfo);
       while (computedOffset < nextOffset) {
         const hiddenEntryInfo = this.readEntryInfo(computedOffset);
