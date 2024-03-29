@@ -53,6 +53,11 @@ export default class HQRReader {
         continue;
       }
 
+      /* Skip broken entries */
+      if (this.entriesIndex[i] > this.buffer.byteLength) {
+        continue;
+      }
+
       /* Read entry */
       const entryInfo = this.readEntryInfo(this.entriesIndex[i]);
       const entry = this.readEntry(hqr, entryInfo);
